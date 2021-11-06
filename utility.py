@@ -101,7 +101,7 @@ def fd_assetportfolio(security_ids, report_dates_begin):
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
 
     query = f"""
-    SELECT SECURITYID, REPORTDATE, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
+    SELECT SECURITYID, REPORTDATE, BDRTO, CONVBDRTO, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
     WHERE
         REPORTDATE >= '{report_dates_begin}' AND
         ISVALID = 1 AND
