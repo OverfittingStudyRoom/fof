@@ -95,7 +95,7 @@ def fd_hshkiport(security_ids, report_dates_begin):
 
 def fd_assetportfolio(security_ids, report_dates_begin):
     # 获取相关组合情况
-    f isinstance(security_ids, str):
+    if isinstance(security_ids, str):
         sec_id_strs = security_ids
     else:
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
@@ -107,4 +107,4 @@ def fd_assetportfolio(security_ids, report_dates_begin):
         ISVALID = 1 AND
         SECURITYID in ({sec_id_strs})
     """
-    return = read_sql(query).sort_values("SECURITYID")
+    return read_sql(query).sort_values("SECURITYID")
