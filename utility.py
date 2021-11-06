@@ -24,25 +24,35 @@ def nearest_report_date(date):
     return dt.date(last_year, q, last).strftime("%Y%m%d")
 
 
-def fd_basicinfo(security_ids, trade_dt=None):
+def fd_basicinfo(security_ids=None, trade_dt=None):
     if not trade_dt:
         trade_dt = dt.datetime.today().strftime("%Y%m%d")
     else:
         trade_dt = trade_dt.replace("-", "")
 
     if isinstance(security_ids, str):
-        sec_id_strs = security_ids.split(",")
+        sec_id_strs = security_ids
+    elif not security_ids:
+        sec_id_strs = None
     else:
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
 
     engine = sa.create_engine(CONN, connect_args={"charset": "GBK"})
-    query = f"""
-    select SECURITYID, FDNAME, SNAMECOMP, FSYMBOL from TQ_FD_BASICINFO
-    WHERE
-        ISVALID = 1 AND
-        SECURITYID in ({sec_id_strs}) AND
-        (LIQUENDDATE >= '{trade_dt}' or LIQUENDDATE = '19000101')
-    """
+    if sec_id_strs:
+        query = f"""
+        select SECURITYID, FDNAME, SNAMECOMP, FSYMBOL, FDNATURE, INVESTSTYLE from TQ_FD_BASICINFO
+        WHERE
+            ISVALID = 1 AND
+            SECURITYID in ({sec_id_strs}) AND
+            (LIQUENDDATE >= '{trade_dt}' or LIQUENDDATE = '19000101')
+        """
+    else:
+        query = f"""
+        select SECURITYID, FDNAME, SNAMECOMP, FSYMBOL, FDNATURE, INVESTSTYLE from TQ_FD_BASICINFO
+        WHERE
+            ISVALID = 1 AND
+            (LIQUENDDATE >= '{trade_dt}' or LIQUENDDATE = '19000101')
+        """
     return pd.read_sql(query, con=engine)
 
 
@@ -53,13 +63,13 @@ def fd_typeclass(security_ids, trade_dt=None):
         trade_dt = trade_dt.replace("-", "")
 
     if isinstance(security_ids, str):
-        sec_id_strs = security_ids.split(",")
+        sec_id_strs = security_ids
     else:
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
 
     engine = sa.create_engine(CONN, connect_args={"charset": "GBK"})
     query = f"""
-    select SECURITYID, L1CODE, L1NAME, L2CODE, L2NAME from TQ_FD_TYPECLASS
+    select SECURITYID, L1CODE, L1NAME, L2CODE, L2NAME, L3CODE, L3NAME from TQ_FD_TYPECLASS
     WHERE
         ISVALID = 1 AND
         SECURITYID in ({sec_id_strs})
