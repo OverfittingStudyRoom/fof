@@ -36,8 +36,7 @@ def fd_basicinfo(security_ids=None, trade_dt=None):
         sec_id_strs = None
     else:
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
-
-    engine = sa.create_engine(CONN, connect_args={"charset": "GBK"})
+        
     if sec_id_strs:
         query = f"""
         select SECURITYID, FDNAME, SNAMECOMP, FSYMBOL, FDNATURE, INVESTSTYLE from TQ_FD_BASICINFO
@@ -53,7 +52,7 @@ def fd_basicinfo(security_ids=None, trade_dt=None):
             ISVALID = 1 AND
             (LIQUENDDATE >= '{trade_dt}' or LIQUENDDATE = '19000101')
         """
-    return pd.read_sql(query, con=engine)
+    return read_sql(query)
 
 
 def fd_typeclass(security_ids, trade_dt=None):
@@ -67,11 +66,45 @@ def fd_typeclass(security_ids, trade_dt=None):
     else:
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
 
-    engine = sa.create_engine(CONN, connect_args={"charset": "GBK"})
     query = f"""
     select SECURITYID, L1CODE, L1NAME, L2CODE, L2NAME, L3CODE, L3NAME from TQ_FD_TYPECLASS
     WHERE
         ISVALID = 1 AND
         SECURITYID in ({sec_id_strs})
     """
-    return pd.read_sql(query, con=engine)
+    return read_sql(query)
+
+
+def fd_hshkiport(security_ids, report_dates_begin):
+
+    if isinstance(security_ids, str):
+        sec_id_strs = security_ids
+    else:
+        sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
+
+    query = f"""
+    select SECODE as SECURITYID, INDCLASSCODE, INDUSTRYCODE, INDUSTRYNAME, REPORTDATE, MVALUE, ACCNETMKTCAP from TQ_FD_HSHKIPORT
+    WHERE
+        REPORTDATE >= '{report_dates_begin}' AND
+        ISVALID = 1 AND
+        INDCLASSCODE = '2102' AND
+        SECODE in ({sec_id_strs})
+    """
+    return read_sql(query).sort_values("SECURITYID")
+
+
+def fd_assetportfolio(security_ids, report_dates_begin):
+    # 获取相关组合情况
+    f isinstance(security_ids, str):
+        sec_id_strs = security_ids
+    else:
+        sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
+
+    query = f"""
+    SELECT SECURITYID, REPORTDATE, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
+    WHERE
+        REPORTDATE >= '{report_dates_begin}' AND
+        ISVALID = 1 AND
+        SECURITYID in ({sec_id_strs})
+    """
+    return = read_sql(query).sort_values("SECURITYID")
