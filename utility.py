@@ -24,6 +24,29 @@ def nearest_report_date(date):
     return dt.date(last_year, q, last).strftime("%Y%m%d")
 
 
+def fd_alive_funds(trade_dt, l1_code=None):
+    if l1_code is not None:
+        security_ids = read_sql(f"""
+        select SECURITYID from TQ_FD_TYPECLASS 
+        WHERE
+            ISVALID = 1 AND
+            L1CODE = {l1_code} AND
+            BEGINDATE <= '{trade_dt}' AND
+            (ENDDATE>='{trade_dt}' or ENDDATE = '19000101') 
+        ORDER BY SECURITYID;
+        """)["SECURITYID"].unique().tolist()
+    else:
+        security_ids = read_sql(f"""
+        select SECURITYID from TQ_FD_TYPECLASS 
+        WHERE
+            ISVALID = 1 AND
+            BEGINDATE <= '{trade_dt}' AND
+            (ENDDATE>='{trade_dt}' or ENDDATE = '19000101') 
+        ORDER BY SECURITYID;
+        """)["SECURITYID"].unique().tolist()
+    return security_ids
+
+
 def fd_basicinfo(security_ids=None, trade_dt=None):
     if not trade_dt:
         trade_dt = dt.datetime.today().strftime("%Y%m%d")
@@ -70,40 +93,77 @@ def fd_typeclass(security_ids, trade_dt=None):
     select SECURITYID, L1CODE, L1NAME, L2CODE, L2NAME, L3CODE, L3NAME from TQ_FD_TYPECLASS
     WHERE
         ISVALID = 1 AND
-        SECURITYID in ({sec_id_strs})
+        SECURITYID in ({sec_id_strs}) AND
+         (ENDDATE >= '{trade_dt}' or ENDDATE = '19000101')
     """
     return read_sql(query)
 
 
-def fd_hshkiport(security_ids, report_dates_begin):
+def fd_hshkiport(security_ids, report_dates_begin, report_dates_end=None):
 
     if isinstance(security_ids, str):
         sec_id_strs = security_ids
     else:
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
-
-    query = f"""
-    select SECODE as SECURITYID, INDCLASSCODE, INDUSTRYCODE, INDUSTRYNAME, REPORTDATE, MVALUE, ACCNETMKTCAP from TQ_FD_HSHKIPORT
-    WHERE
-        REPORTDATE >= '{report_dates_begin}' AND
-        ISVALID = 1 AND
-        INDCLASSCODE = '2102' AND
-        SECODE in ({sec_id_strs})
-    """
+    
+    if report_dates_end:
+        query = f"""
+        select SECODE as SECURITYID, INDCLASSCODE, INDUSTRYCODE, INDUSTRYNAME, REPORTDATE, MVALUE, ACCNETMKTCAP from TQ_FD_HSHKIPORT
+        WHERE
+            REPORTDATE >= '{report_dates_begin}' AND
+            REPORTDATE <= '{report_dates_end}' AND
+            ISVALID = 1 AND
+            INDCLASSCODE = '2102' AND
+            SECODE in ({sec_id_strs})
+        """
+    else:
+        query = f"""
+        select SECODE as SECURITYID, INDCLASSCODE, INDUSTRYCODE, INDUSTRYNAME, REPORTDATE, MVALUE, ACCNETMKTCAP from TQ_FD_HSHKIPORT
+        WHERE
+            REPORTDATE >= '{report_dates_begin}' AND
+            ISVALID = 1 AND
+            INDCLASSCODE = '2102' AND
+            SECODE in ({sec_id_strs})
+        """
     return read_sql(query).sort_values("SECURITYID")
 
 
-def fd_assetportfolio(security_ids, report_dates_begin):
+def fd_assetportfolio(security_ids, report_dates_begin, report_dates_end=None):
     # 获取相关组合情况
     if isinstance(security_ids, str):
         sec_id_strs = security_ids
     else:
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
+    if report_dates_end:
+        query = f"""
+        SELECT SECURITYID, REPORTDATE, BDRTO, CONVBDRTO, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
+        WHERE
+            REPORTDATE >= '{report_dates_begin}' AND
+            REPORTDATE <= '{report_dates_end}' AND
+            ISVALID = 1 AND
+            SECURITYID in ({sec_id_strs})
+        """
+    else:
+        query = f"""
+        SELECT SECURITYID, REPORTDATE, BDRTO, CONVBDRTO, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
+        WHERE
+            REPORTDATE >= '{report_dates_begin}' AND
+            ISVALID = 1 AND
+            SECURITYID in ({sec_id_strs})
+        """
+    return read_sql(query).sort_values("SECURITYID")
 
+
+def fd_derieden(security_ids, trade_dt):
+    if isinstance(security_ids, str):
+        sec_id_strs = security_ids
+    else:
+        sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
+        
     query = f"""
-    SELECT SECURITYID, REPORTDATE, BDRTO, CONVBDRTO, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
+    SELECT SECURITYID, UNITNAV, UNITACCNAV, REPAIRUNITNAV, NAVGRTD from TQ_FD_DERIVEDN
     WHERE
-        REPORTDATE >= '{report_dates_begin}' AND
+        ENDDATE = '{trade_dt}' AND
         ISVALID = 1 AND
         SECURITYID in ({sec_id_strs})
     """
