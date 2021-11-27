@@ -24,27 +24,18 @@ def nearest_report_date(date):
     return dt.date(last_year, q, last).strftime("%Y%m%d")
 
 
-def fd_alive_funds(trade_dt, l1_code=None):
-    if l1_code is not None:
-        security_ids = read_sql(f"""
-        select SECURITYID from TQ_FD_TYPECLASS 
-        WHERE
-            ISVALID = 1 AND
-            L1CODE = {l1_code} AND
-            BEGINDATE <= '{trade_dt}' AND
-            (ENDDATE>='{trade_dt}' or ENDDATE = '19000101') 
-        ORDER BY SECURITYID;
-        """)["SECURITYID"].unique().tolist()
-    else:
-        security_ids = read_sql(f"""
-        select SECURITYID from TQ_FD_TYPECLASS 
-        WHERE
-            ISVALID = 1 AND
-            BEGINDATE <= '{trade_dt}' AND
-            (ENDDATE>='{trade_dt}' or ENDDATE = '19000101') 
-        ORDER BY SECURITYID;
-        """)["SECURITYID"].unique().tolist()
-    return security_ids
+def fd_alive_funds(trade_dt, type_style, class_code):
+    sec_codes = read_sql(f"""
+    select SECODE from TQ_FD_TYPE
+    WHERE
+        ISVALID = 1 AND
+        TYPESTYLE = '{type_style}' AND
+        CLASSCODE = '{class_code}' AND
+        BEGINDATE <= '{trade_dt}' AND
+        (ENDDATE>='{trade_dt}' or ENDDATE = '19000101') 
+    ORDER BY SECODE;
+    """)["SECODE"].unique().tolist()
+    return sec_codes
 
 
 def fd_basicinfo(security_ids=None, trade_dt=None):
