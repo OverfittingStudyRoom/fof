@@ -92,11 +92,18 @@ def fd_typeclass(security_ids, trade_dt=None):
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
 
     query = f"""
-    select SECURITYID, L1CODE, L1NAME, L2CODE, L2NAME, L3CODE, L3NAME from TQ_FD_TYPECLASS
+    select TQ_FD_BASICINFO.SECODE as SECURITYID,
+           TQ_FD_TYPECLASS.L1CODE,
+           TQ_FD_TYPECLASS.L1NAME,
+           TQ_FD_TYPECLASS.L2CODE,
+           TQ_FD_TYPECLASS.L2NAME,
+           TQ_FD_TYPECLASS.L3CODE,
+           TQ_FD_TYPECLASS.L3NAME from TQ_FD_TYPECLASS join TQ_FD_BASICINFO on TQ_FD_BASICINFO.SECURITYID = TQ_FD_TYPECLASS.SECURITYID
     WHERE
-        ISVALID = 1 AND
-        SECURITYID in ({sec_id_strs}) AND
-         (ENDDATE >= '{trade_dt}' or ENDDATE = '19000101')
+        TQ_FD_TYPECLASS.ISVALID = 1 AND
+        TQ_FD_BASICINFO.ISVALID = 1 AND
+        TQ_FD_BASICINFO.SECODE in ({sec_id_strs}) AND
+        (TQ_FD_TYPECLASS.ENDDATE >= '{trade_dt}' or TQ_FD_TYPECLASS.ENDDATE = '19000101')
     """
     return read_sql(query)
 
@@ -163,9 +170,9 @@ def fd_qtfdnav(security_ids, trade_dt):
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
         
     query = f"""
-    SELECT SECODE as SECURITYID, UNITNAV, ACCUNITNAV from TQ_QT_FDNAV
+    SELECT SECODE as SECURITYID, UNITNAV, UNITACCNAV, REPAIRUNITNAV, NAVGRTD from TQ_FD_DERIVEDN
     WHERE
-        NAVDATE = '{trade_dt}' AND
+        ENDDATE = '{trade_dt}' AND
         ISVALID = 1 AND
         SECODE in ({sec_id_strs})
     """
