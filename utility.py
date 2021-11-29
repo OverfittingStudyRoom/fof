@@ -24,17 +24,28 @@ def nearest_report_date(date):
     return dt.date(last_year, q, last).strftime("%Y%m%d")
 
 
-def fd_alive_funds(trade_dt, type_style, class_code):
-    sec_codes = read_sql(f"""
-    select SECODE from TQ_FD_TYPE
-    WHERE
-        ISVALID = 1 AND
-        TYPESTYLE = '{type_style}' AND
-        CLASSCODE = '{class_code}' AND
-        BEGINDATE <= '{trade_dt}' AND
-        (ENDDATE>='{trade_dt}' or ENDDATE = '19000101') 
-    ORDER BY SECODE;
-    """)["SECODE"].unique().tolist()
+def fd_alive_funds(trade_dt, class_code=None):
+    if class_code:
+        query = f"""
+                select SECODE from TQ_FD_TYPE
+                WHERE
+                    ISVALID = 1 AND
+                    TYPESTYLE = '{str(class_code)[0]}' AND
+                    CLASSCODE = '{class_code}' AND
+                    BEGINDATE <= '{trade_dt}' AND
+                    (ENDDATE>='{trade_dt}' or ENDDATE = '19000101') 
+                ORDER BY SECODE;
+                """
+    else:
+        query = f"""
+                select SECODE from TQ_FD_TYPE
+                WHERE
+                    ISVALID = 1 AND
+                    BEGINDATE <= '{trade_dt}' AND
+                    (ENDDATE>='{trade_dt}' or ENDDATE = '19000101') 
+                ORDER BY SECODE;
+                """
+    sec_codes = read_sql(query)["SECODE"].unique().tolist()
     return sec_codes
 
 
@@ -53,15 +64,15 @@ def fd_basicinfo(security_ids=None, trade_dt=None):
         
     if sec_id_strs:
         query = f"""
-        select SECURITYID, FDNAME, SNAMECOMP, FSYMBOL, FDNATURE, INVESTSTYLE from TQ_FD_BASICINFO
+        select SECODE as SECURITYID, FDNAME, SNAMECOMP, FSYMBOL, FDNATURE, INVESTSTYLE from TQ_FD_BASICINFO
         WHERE
             ISVALID = 1 AND
-            SECURITYID in ({sec_id_strs}) AND
+            SECODE in ({sec_id_strs}) AND
             (LIQUENDDATE >= '{trade_dt}' or LIQUENDDATE = '19000101')
         """
     else:
         query = f"""
-        select SECURITYID, FDNAME, SNAMECOMP, FSYMBOL, FDNATURE, INVESTSTYLE from TQ_FD_BASICINFO
+        select SECODE as SECURITYID, FDNAME, SNAMECOMP, FSYMBOL, FDNATURE, INVESTSTYLE from TQ_FD_BASICINFO
         WHERE
             ISVALID = 1 AND
             (LIQUENDDATE >= '{trade_dt}' or LIQUENDDATE = '19000101')
@@ -127,35 +138,35 @@ def fd_assetportfolio(security_ids, report_dates_begin, report_dates_end=None):
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
     if report_dates_end:
         query = f"""
-        SELECT SECURITYID, REPORTDATE, BDRTO, CONVBDRTO, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
+        SELECT SECODE as SECURITYID, REPORTDATE, BDRTO, CONVBDRTO, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
         WHERE
             REPORTDATE >= '{report_dates_begin}' AND
             REPORTDATE <= '{report_dates_end}' AND
             ISVALID = 1 AND
-            SECURITYID in ({sec_id_strs})
+            SECODE in ({sec_id_strs})
         """
     else:
         query = f"""
-        SELECT SECURITYID, REPORTDATE, BDRTO, CONVBDRTO, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
+        SELECT SECODE as SECURITYID, REPORTDATE, BDRTO, CONVBDRTO, EQUITYINVERTO from TQ_FD_ASSETPORTFOLIO
         WHERE
             REPORTDATE >= '{report_dates_begin}' AND
             ISVALID = 1 AND
-            SECURITYID in ({sec_id_strs})
+            SECODE in ({sec_id_strs})
         """
     return read_sql(query).sort_values("SECURITYID")
 
 
-def fd_derieden(security_ids, trade_dt):
+def fd_qtfdnav(security_ids, trade_dt):
     if isinstance(security_ids, str):
         sec_id_strs = security_ids
     else:
         sec_id_strs = ",".join(["'" + s + "'" for s in security_ids])
         
     query = f"""
-    SELECT SECURITYID, UNITNAV, UNITACCNAV, REPAIRUNITNAV, NAVGRTD from TQ_FD_DERIVEDN
+    SELECT SECODE as SECURITYID, UNITNAV, ACCUNITNAV from TQ_QT_FDNAV
     WHERE
-        ENDDATE = '{trade_dt}' AND
+        NAVDATE = '{trade_dt}' AND
         ISVALID = 1 AND
-        SECURITYID in ({sec_id_strs})
+        SECODE in ({sec_id_strs})
     """
     return read_sql(query).sort_values("SECURITYID")
